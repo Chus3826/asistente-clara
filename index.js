@@ -1,32 +1,71 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const { MessagingResponse } = require('twilio').twiml;
+const cron = require('node-cron');
+const twilio = require('twilio');
+require('dotenv').config();
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: false }));
 
+const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+const whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER;
+
 // Estado en memoria (demo)
 const usuarios = {};
+
+// Revisar recordatorios cada minuto
+cron.schedule('* * * * *', () => {
+  const ahora = new Date();
+  const horaActual = ahora.toTimeString().substring(0, 5); // formato HH:MM
+
+  Object.keys(usuarios).forEach(numero => {
+    const usuario = usuarios[numero];
+
+    // Recordatorios de medicamentos
+    usuario.medicamentos?.forEach(med => {
+      if (med.hora === horaActual) {
+        client.messages.create({
+          from: whatsappFrom,
+          to: numero,
+          body: `🕒 ¡Hola! Es hora de tomar tu medicamento: ${med.nombre} 💊`
+        });
+      }
+    });
+
+    // Recordatorios de citas
+    usuario.citas?.forEach(cita => {
+      const fecha = new Date();
+      const hoy = fecha.toLocaleDateString('es-ES');
+
+      if (cita.fecha === hoy && cita.hora === horaActual) {
+        client.messages.create({
+          from: whatsappFrom,
+          to: numero,
+          body: `📅 ¡Hola! Tienes una cita médica: ${cita.descripcion} hoy a las ${cita.hora} 🏥`
+        });
+      }
+    });
+  });
+});
 
 app.post('/whatsapp', (req, res) => {
   const from = req.body.From;
   const msg = req.body.Body.toLowerCase().trim();
-  const twiml = new MessagingResponse();
+  const twiml = new twilio.twiml.MessagingResponse();
   const response = twiml.message();
 
   if (!usuarios[from]) {
     usuarios[from] = {
       estado: null,
       medicamento: null,
-      hora: null,
-      citas: [],
-      medicamentos: []
+      cita: null,
+      medicamentos: [],
+      citas: []
     };
   }
 
   const usuario = usuarios[from];
 
-  // Comando para ver lo guardado
   if (msg === 'ver') {
     let texto = '📋 Esto es lo que tengo guardado para ti:\n';
 
@@ -54,7 +93,6 @@ app.post('/whatsapp', (req, res) => {
     return;
   }
 
-  // Flujo principal
   switch (usuario.estado) {
     case 'esperando_nombre_medicamento':
       usuario.medicamento = msg;
