@@ -1,7 +1,7 @@
 {
   "name": "asistente-clara",
-  "version": "3.0.0",
-  "description": "Asistente de WhatsApp para personas mayores con recordatorios automáticos",
+  "version": "4.0.0",
+  "description": "Asistente de WhatsApp con zona horaria España (UTC+2)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

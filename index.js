@@ -10,18 +10,30 @@ app.use(bodyParser.urlencoded({ extended: false }));
 const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 const whatsappFrom = process.env.TWILIO_WHATSAPP_NUMBER;
 
-// Estado en memoria (demo)
+// Estado en memoria
 const usuarios = {};
 
-// Revisar recordatorios cada minuto
+// Ajustar la hora a UTC+2
+function obtenerHoraLocal() {
+  const ahoraUTC = new Date();
+  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000); // UTC+2
+  return ahoraEspaña.toTimeString().substring(0, 5); // "HH:MM"
+}
+
+function obtenerFechaLocal() {
+  const ahoraUTC = new Date();
+  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000); // UTC+2
+  return ahoraEspaña.toLocaleDateString('es-ES'); // dd/mm/yyyy
+}
+
+// Revisión cada minuto
 cron.schedule('* * * * *', () => {
-  const ahora = new Date();
-  const horaActual = ahora.toTimeString().substring(0, 5); // formato HH:MM
+  const horaActual = obtenerHoraLocal();
+  const fechaActual = obtenerFechaLocal();
 
   Object.keys(usuarios).forEach(numero => {
     const usuario = usuarios[numero];
 
-    // Recordatorios de medicamentos
     usuario.medicamentos?.forEach(med => {
       if (med.hora === horaActual) {
         client.messages.create({
@@ -32,12 +44,8 @@ cron.schedule('* * * * *', () => {
       }
     });
 
-    // Recordatorios de citas
     usuario.citas?.forEach(cita => {
-      const fecha = new Date();
-      const hoy = fecha.toLocaleDateString('es-ES');
-
-      if (cita.fecha === hoy && cita.hora === horaActual) {
+      if (cita.fecha === fechaActual && cita.hora === horaActual) {
         client.messages.create({
           from: whatsappFrom,
           to: numero,
