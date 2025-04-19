@@ -19,24 +19,23 @@ const mensajesAnimo = [
 
 function obtenerHoraLocal() {
   const ahoraUTC = new Date();
-  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000); // UTC+2
+  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000);
   return ahoraEspaña.toTimeString().substring(0, 5);
 }
 
 function obtenerFechaActualISO() {
   const ahoraUTC = new Date();
   const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000);
-  return ahoraEspaña.toISOString().split('T')[0]; // YYYY-MM-DD
+  return ahoraEspaña.toISOString().split('T')[0];
 }
 
-// CRON para mensajes diarios, resumen y ánimo
+// CRON: Resumen diario, mensaje de ánimo, y seguimiento de inactividad
 cron.schedule('* * * * *', () => {
   const ahora = Date.now();
   const hora = obtenerHoraLocal();
   const fecha = obtenerFechaActualISO();
 
   Object.entries(usuarios).forEach(([numero, usuario]) => {
-    // Resumen diario a las 07:00
     if (hora === '07:00') {
       let resumen = `🌞 Buenos días ${usuario.nombre || 'cariño'}! Hoy tienes:
 `;
@@ -61,13 +60,11 @@ cron.schedule('* * * * *', () => {
       }
     }
 
-    // Mensaje de ánimo a las 10:00
     if (hora === '10:00') {
       const mensaje = mensajesAnimo[Math.floor(Math.random() * mensajesAnimo.length)];
       client.messages.create({ from: whatsappFrom, to: numero, body: mensaje });
     }
 
-    // Inactividad > 3 días
     if (usuario.ultimoMensaje && ahora - usuario.ultimoMensaje > 3 * 24 * 60 * 60 * 1000) {
       client.messages.create({
         from: whatsappFrom,
@@ -81,16 +78,14 @@ cron.schedule('* * * * *', () => {
 
 app.post('/whatsapp', (req, res) => {
   const from = req.body.From;
-  const msg = req.body.Body.trim().toLowerCase();
+  const msg = req.body.Body.trim();
   const twiml = new twilio.twiml.MessagingResponse();
   const response = twiml.message();
 
   if (!usuarios[from]) {
     usuarios[from] = {
       nombre: null,
-      estado: null,
-      medicamento: null,
-      cita: null,
+      estado: 'esperando_nombre',
       medicamentos: [],
       citas: [],
       ultimoMensaje: Date.now()
@@ -100,15 +95,16 @@ app.post('/whatsapp', (req, res) => {
   const usuario = usuarios[from];
   usuario.ultimoMensaje = Date.now();
 
-  if (!usuario.nombre) {
-    usuario.nombre = msg.charAt(0).toUpperCase() + msg.slice(1);
-    response.body(`Encantada de ayudarte, ${usuario.nombre} 💙 ¿Quieres que te recuerde un medicamento o una cita?`);
+  if (usuario.estado === 'esperando_nombre') {
+    usuario.nombre = msg.charAt(0).toUpperCase() + msg.slice(1).toLowerCase();
+    usuario.estado = null;
+    response.body(`Encantada de ayudarte, ${usuario.nombre} 💙 ¿Quieres que te recuerde un medicamento o una cita? Puedes decirme "medicamento", "cita", "ver", "eliminar" o "ayuda".`);
     res.set('Content-Type', 'text/xml');
     res.send(twiml.toString());
     return;
   }
 
-  if (msg === 'ayuda') {
+  if (msg.toLowerCase() === 'ayuda') {
     response.body(`Puedo ayudarte con estas cosas:
 💊 Recordar medicamentos
 📅 Citas médicas
@@ -120,12 +116,12 @@ Solo dime la palabra y lo hacemos juntas 😊`);
     return;
   }
 
-  response.body(`Hola ${usuario.nombre} 👋 ¿Qué necesitas hoy? Puedes decirme "medicamento", "cita", "ver", "eliminar" o "ayuda".`);
+  response.body(`Hola ${usuario.nombre || 'cariño'} 👋 ¿Qué necesitas hoy? Puedes decirme "medicamento", "cita", "ver", "eliminar" o "ayuda".`);
   res.set('Content-Type', 'text/xml');
   res.send(twiml.toString());
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log('Clara v7 está en marcha en el puerto', PORT);
+  console.log('Clara con bienvenida corregida funcionando en el puerto', PORT);
 });

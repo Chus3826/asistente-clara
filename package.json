@@ -1,7 +1,7 @@
 {
   "name": "asistente-clara",
-  "version": "6.0.0",
-  "description": "Asistente Clara con funciones de eliminación",
+  "version": "7.1.0",
+  "description": "Asistente Clara con nombre personalizado y bienvenida funcional",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
