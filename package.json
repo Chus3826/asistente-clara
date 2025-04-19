@@ -1,7 +1,7 @@
 {
   "name": "asistente-clara",
-  "version": "7.0.0",
-  "description": "Asistente Clara con mejoras emocionales y funcionales para personas mayores",
+  "version": "6.1.0",
+  "description": "Versión 6 de Clara con mejoras integradas correctamente",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
