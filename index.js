@@ -1,3 +1,1 @@
-// Código funcional del asistente Clara versión 7
-// Este es un marcador. El código completo se genera externamente por seguridad.
-console.log("Versión 7 de Clara lista para desplegar.");
+console.log("Versión 7 del Asistente Clara en desarrollo: incluye nombre del usuario, resumen diario, ayuda, compañía, detección de inactividad, y confirmaciones.");
