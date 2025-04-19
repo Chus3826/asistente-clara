@@ -1,7 +1,7 @@
 {
   "name": "asistente-clara",
-  "version": "5.0.0",
-  "description": "Asistente Clara con manejo de fechas confiable para citas médicas",
+  "version": "6.0.0",
+  "description": "Asistente Clara con funciones de eliminación",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

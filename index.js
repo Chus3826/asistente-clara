@@ -23,14 +23,14 @@ function formatearFechaUsuario(fecha) {
 
 function obtenerFechaActualISO() {
   const ahoraUTC = new Date();
-  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000); // UTC+2
-  return ahoraEspaña.toISOString().split('T')[0]; // YYYY-MM-DD
+  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000);
+  return ahoraEspaña.toISOString().split('T')[0];
 }
 
 function obtenerHoraLocal() {
   const ahoraUTC = new Date();
-  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000); // UTC+2
-  return ahoraEspaña.toTimeString().substring(0, 5); // HH:MM
+  const ahoraEspaña = new Date(ahoraUTC.getTime() + 2 * 60 * 60 * 1000);
+  return ahoraEspaña.toTimeString().substring(0, 5);
 }
 
 cron.schedule('* * * * *', () => {
@@ -80,6 +80,7 @@ app.post('/whatsapp', (req, res) => {
 
   const usuario = usuarios[from];
 
+  // Ver listado guardado
   if (msg === 'ver') {
     let texto = '📋 Esto es lo que tengo guardado para ti:\n';
 
@@ -107,7 +108,70 @@ app.post('/whatsapp', (req, res) => {
     return;
   }
 
+  // Eliminar
+  if (msg === 'eliminar') {
+    usuario.estado = 'eliminar_tipo';
+    response.body('¿Qué quieres eliminar, cielo?\n1️⃣ Medicamento\n2️⃣ Cita médica');
+    res.set('Content-Type', 'text/xml');
+    res.send(twiml.toString());
+    return;
+  }
+
   switch (usuario.estado) {
+    case 'eliminar_tipo':
+      if (msg === '1') {
+        if (usuario.medicamentos.length === 0) {
+          response.body('No tienes medicamentos guardados 💊');
+          usuario.estado = null;
+        } else {
+          usuario.estado = 'eliminar_medicamento';
+          let texto = 'Estos son tus medicamentos:\n';
+          usuario.medicamentos.forEach((m, i) => {
+            texto += `\n${i + 1}. ${m.nombre} a las ${m.hora}`;
+          });
+          texto += '\n\nEscribe el número del que quieres eliminar.';
+          response.body(texto);
+        }
+      } else if (msg === '2') {
+        if (usuario.citas.length === 0) {
+          response.body('No tienes citas guardadas 📅');
+          usuario.estado = null;
+        } else {
+          usuario.estado = 'eliminar_cita';
+          let texto = 'Estas son tus citas:\n';
+          usuario.citas.forEach((c, i) => {
+            texto += `\n${i + 1}. ${c.descripcion} el ${c.fechaOriginal} a las ${c.hora}`;
+          });
+          texto += '\n\nEscribe el número de la que quieres eliminar.';
+          response.body(texto);
+        }
+      } else {
+        response.body('Por favor, responde con 1 para medicamento o 2 para cita.');
+      }
+      break;
+
+    case 'eliminar_medicamento':
+      const iMed = parseInt(msg) - 1;
+      if (!isNaN(iMed) && usuario.medicamentos[iMed]) {
+        const eliminado = usuario.medicamentos.splice(iMed, 1)[0];
+        response.body(`He eliminado el medicamento "${eliminado.nombre}" de tus recordatorios 💊`);
+      } else {
+        response.body('Ese número no corresponde a ningún medicamento. Intenta de nuevo.');
+      }
+      usuario.estado = null;
+      break;
+
+    case 'eliminar_cita':
+      const iCita = parseInt(msg) - 1;
+      if (!isNaN(iCita) && usuario.citas[iCita]) {
+        const eliminado = usuario.citas.splice(iCita, 1)[0];
+        response.body(`He eliminado la cita "${eliminado.descripcion}" del ${eliminado.fechaOriginal} 📅`);
+      } else {
+        response.body('Ese número no corresponde a ninguna cita. Intenta de nuevo.');
+      }
+      usuario.estado = null;
+      break;
+
     case 'esperando_nombre_medicamento':
       usuario.medicamento = msg;
       usuario.estado = 'esperando_hora_medicamento';
@@ -157,7 +221,7 @@ app.post('/whatsapp', (req, res) => {
         usuario.estado = 'esperando_descripcion_cita';
         response.body('Muy bien 😊 ¿De qué es la cita? (Ej: dentista, cardiólogo...)');
       } else {
-        response.body('No entendí muy bien eso... pero estoy aquí para ayudarte 🧡. Puedes escribirme "medicamento", "cita" o "ver".');
+        response.body('No entendí muy bien eso... pero estoy aquí para ayudarte 🧡. Puedes escribirme "medicamento", "cita", "ver" o "eliminar".');
       }
   }
 
