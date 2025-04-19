@@ -1,7 +1,7 @@
 {
   "name": "asistente-clara",
-  "version": "4.0.0",
-  "description": "Asistente de WhatsApp con zona horaria España (UTC+2)",
+  "version": "5.0.0",
+  "description": "Asistente Clara con manejo de fechas confiable para citas médicas",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
